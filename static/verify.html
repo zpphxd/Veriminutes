@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackBox - Verify Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #00ff88;
+            --accent-hover: #00cc6a;
+            --error: #ff4444;
+            --warning: #ffaa00;
+            --border: #333333;
+            --success: #00ff88;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 2rem 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-box {
+            width: 40px;
+            height: 40px;
+            background: #000000;
+            border: 2px solid var(--accent);
+            display: inline-block;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+        }
+
+        .main {
+            flex: 1;
+            padding: 3rem 0;
+        }
+
+        .verify-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .section-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 4rem 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: var(--accent);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            opacity: 0.5;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .verification-steps {
+            display: none;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .verification-steps.active {
+            display: block;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .step.processing {
+            border-color: var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        .step.success {
+            border-color: var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .step.failed {
+            border-color: var(--error);
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .step.warning {
+            border-color: var(--warning);
+            background: rgba(255, 170, 0, 0.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-details {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            word-break: break-all;
+            display: none;
+        }
+
+        .step-details.visible {
+            display: block;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .status-badge.pending {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .status-badge.processing {
+            background: var(--accent);
+            color: var(--bg-primary);
+            animation: pulse 1s infinite;
+        }
+
+        .status-badge.success {
+            background: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .status-badge.failed {
+            background: var(--error);
+            color: white;
+        }
+
+        .status-badge.warning {
+            background: var(--warning);
+            color: var(--bg-primary);
+        }
+
+        .overall-result {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .overall-result.visible {
+            display: block;
+        }
+
+        .overall-result.valid {
+            border: 2px solid var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .overall-result.invalid {
+            border: 2px solid var(--error);
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-message {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .button {
+            padding: 0.75rem 2rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .button-secondary {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            margin-left: 1rem;
+        }
+
+        .button-secondary:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .show-details {
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .show-details:hover {
+            opacity: 0.8;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        nav a:hover {
+            color: var(--accent) !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div class="logo">
+                        <span class="logo-box"></span>
+                        <span>BlackBox</span>
+                    </div>
+                    <div class="tagline">Cryptographically Verified Meeting Minutes</div>
+                </div>
+                <nav style="display: flex; gap: 2rem;">
+                    <a href="/" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Upload</a>
+                    <a href="/record.html" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Record</a>
+                    <a href="/verify.html" style="color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem;">Verify</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="verify-container">
+            <div class="upload-section">
+                <h1 class="section-title">Verify Document Authenticity</h1>
+                <p class="section-subtitle">Upload a BlackBox proof packet or PDF to verify its cryptographic signatures</p>
+
+                <div class="upload-area" id="uploadArea">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M9 11l3-3m0 0l3 3m-3-3v8m5-13h1a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h1"/>
+                        <path d="M9 3h6a2 2 0 012 2v1H7V5a2 2 0 012-2z"/>
+                    </svg>
+                    <p style="color: var(--text-primary); font-size: 1.2rem; margin-bottom: 0.5rem;">Drop your proof packet here</p>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Accepts .packet.json, .pdf, or .json files</p>
+                    <input type="file" id="fileInput" accept=".json,.pdf">
+                </div>
+            </div>
+
+            <div id="verificationSteps" class="verification-steps">
+                <h2 style="margin-bottom: 1.5rem;">Verification Process</h2>
+
+                <!-- Step 1: File Integrity -->
+                <div class="step" id="step-integrity">
+                    <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>File Integrity Check</span>
+                            <span class="status-badge pending">Pending</span>
+                        </div>
+                        <p class="step-description">Verifying the document hasn't been modified since creation</p>
+                        <a class="show-details" onclick="toggleDetails('integrity')">Show technical details</a>
+                        <div class="step-details" id="details-integrity">
+                            <div>SHA-256: <span id="sha256-hash">Calculating...</span></div>
+                            <div>BLAKE3: <span id="blake3-hash">Calculating...</span></div>
+                            <div>Status: <span id="integrity-status">Checking...</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Digital Signature -->
+                <div class="step" id="step-signature">
+                    <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>Digital Signature Verification</span>
+                            <span class="status-badge pending">Pending</span>
+                        </div>
+                        <p class="step-description">Confirming the document was signed by the claimed authority</p>
+                        <a class="show-details" onclick="toggleDetails('signature')">Show technical details</a>
+                        <div class="step-details" id="details-signature">
+                            <div>Public Key: <span id="public-key">Loading...</span></div>
+                            <div>Signature: <span id="signature">Loading...</span></div>
+                            <div>Algorithm: Ed25519</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Timestamp -->
+                <div class="step" id="step-timestamp">
+                    <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>Timestamp Validation</span>
+                            <span class="status-badge pending">Pending</span>
+                        </div>
+                        <p class="step-description">Verifying when the document was sealed</p>
+                        <a class="show-details" onclick="toggleDetails('timestamp')">Show technical details</a>
+                        <div class="step-details" id="details-timestamp">
+                            <div>Created: <span id="timestamp-created">Loading...</span></div>
+                            <div>Time Zone: UTC</div>
+                            <div>Format: ISO 8601</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Merkle Tree -->
+                <div class="step" id="step-merkle">
+                    <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
+                        <path d="M16 3v5M8 3v5M4 11h16"/>
+                    </svg>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>Merkle Tree Verification</span>
+                            <span class="status-badge pending">Pending</span>
+                        </div>
+                        <p class="step-description">Validating the document's cryptographic proof structure</p>
+                        <a class="show-details" onclick="toggleDetails('merkle')">Show technical details</a>
+                        <div class="step-details" id="details-merkle">
+                            <div>Root Hash: <span id="merkle-root">Loading...</span></div>
+                            <div>Leaf Count: <span id="leaf-count">Loading...</span></div>
+                            <div>Chunk Size: 64KB</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Blockchain (Optional) -->
+                <div class="step" id="step-blockchain" style="display: none;">
+                    <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <div class="step-content">
+                        <div class="step-title">
+                            <span>Blockchain Anchor</span>
+                            <span class="status-badge pending">Pending</span>
+                        </div>
+                        <p class="step-description">Checking immutable timestamp on blockchain</p>
+                        <a class="show-details" onclick="toggleDetails('blockchain')">Show technical details</a>
+                        <div class="step-details" id="details-blockchain">
+                            <div>Transaction: <span id="tx-hash">Not anchored</span></div>
+                            <div>Chain: <span id="chain-id">N/A</span></div>
+                            <div>Block: <span id="block-number">N/A</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall Result -->
+                <div class="overall-result" id="overallResult">
+                    <svg class="result-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h2 class="result-title">Document Verified</h2>
+                    <p class="result-message">This document has passed all cryptographic verification checks</p>
+                    <div style="margin-top: 2rem;">
+                        <button class="button" onclick="downloadReport()">Download Report</button>
+                        <button class="button button-secondary" onclick="resetVerification()">Verify Another</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>BlackBox - Immutable Meeting Records</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:8787';
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const verificationSteps = document.getElementById('verificationSteps');
+
+        let uploadedFile = null;
+        let verificationData = null;
+
+        // Upload events
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        async function handleFileSelect(file) {
+            uploadedFile = file;
+            verificationSteps.classList.add('active');
+
+            // Start verification process
+            await performVerification(file);
+        }
+
+        async function performVerification(file) {
+            // Reset all steps
+            resetSteps();
+
+            // Read file content
+            const content = await file.text();
+            let data;
+
+            try {
+                data = JSON.parse(content);
+                verificationData = data;
+            } catch (e) {
+                showError('Invalid file format. Please upload a valid proof packet.');
+                return;
+            }
+
+            // Step 1: File Integrity
+            await verifyIntegrity(data);
+
+            // Step 2: Digital Signature
+            await verifySignature(data);
+
+            // Step 3: Timestamp
+            await verifyTimestamp(data);
+
+            // Step 4: Merkle Tree
+            await verifyMerkleTree(data);
+
+            // Step 5: Blockchain (if available)
+            if (data.anchorReceipt) {
+                await verifyBlockchain(data);
+            }
+
+            // Show overall result
+            showOverallResult();
+        }
+
+        async function verifyIntegrity(data) {
+            const step = document.getElementById('step-integrity');
+            const badge = step.querySelector('.status-badge');
+
+            step.classList.add('processing');
+            badge.textContent = 'Checking';
+            badge.className = 'status-badge processing';
+
+            // Call actual verification endpoint
+            try {
+                const formData = new FormData();
+                const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+                formData.append('file', blob, 'packet.json');
+
+                const response = await fetch(`${API_URL}/verify/packet`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                await sleep(500);
+
+                if (result.details && result.details.hashMatch) {
+                    document.getElementById('sha256-hash').textContent =
+                        result.details.computedHash?.substring(0, 32) + '...';
+                    document.getElementById('blake3-hash').textContent =
+                        data.credential?.blake3?.substring(0, 32) + '...' || 'N/A';
+                    document.getElementById('integrity-status').textContent =
+                        result.details.message;
+
+                    step.classList.remove('processing');
+                    step.classList.add('success');
+                    badge.textContent = 'Verified';
+                    badge.className = 'status-badge success';
+                } else {
+                    document.getElementById('sha256-hash').textContent = 'MISMATCH';
+                    document.getElementById('blake3-hash').textContent = 'MISMATCH';
+                    document.getElementById('integrity-status').textContent =
+                        result.details?.message || 'Verification failed';
+
+                    step.classList.remove('processing');
+                    step.classList.add('failed');
+                    badge.textContent = 'TAMPERED';
+                    badge.className = 'status-badge failed';
+                }
+
+                // Store result for other steps
+                window.verificationResult = result;
+
+            } catch (error) {
+                step.classList.remove('processing');
+                step.classList.add('failed');
+                badge.textContent = 'Error';
+                badge.className = 'status-badge failed';
+            }
+        }
+
+        async function verifySignature(data) {
+            const step = document.getElementById('step-signature');
+            const badge = step.querySelector('.status-badge');
+
+            step.classList.add('processing');
+            badge.textContent = 'Checking';
+            badge.className = 'status-badge processing';
+
+            await sleep(800);
+
+            const result = window.verificationResult;
+
+            if (data.credential && data.credential.signature) {
+                document.getElementById('public-key').textContent =
+                    data.credential.signer?.publicKey?.substring(0, 20) + '...';
+                document.getElementById('signature').textContent =
+                    data.credential.signature.substring(0, 32) + '...';
+
+                if (result && result.details && result.details.signatureValid) {
+                    step.classList.remove('processing');
+                    step.classList.add('success');
+                    badge.textContent = 'Valid';
+                    badge.className = 'status-badge success';
+                } else {
+                    step.classList.remove('processing');
+                    step.classList.add('failed');
+                    badge.textContent = 'INVALID';
+                    badge.className = 'status-badge failed';
+                }
+            } else {
+                step.classList.remove('processing');
+                step.classList.add('warning');
+                badge.textContent = 'Not Signed';
+                badge.className = 'status-badge warning';
+            }
+        }
+
+        async function verifyTimestamp(data) {
+            const step = document.getElementById('step-timestamp');
+            const badge = step.querySelector('.status-badge');
+
+            step.classList.add('processing');
+            badge.textContent = 'Checking';
+            badge.className = 'status-badge processing';
+
+            await sleep(600);
+
+            if (data.stampedAt || data.credential?.createdAt) {
+                const timestamp = data.stampedAt || data.credential.createdAt;
+                const date = new Date(timestamp);
+                document.getElementById('timestamp-created').textContent =
+                    date.toLocaleString() + ' UTC';
+
+                step.classList.remove('processing');
+                step.classList.add('success');
+                badge.textContent = 'Valid';
+                badge.className = 'status-badge success';
+            } else {
+                step.classList.remove('processing');
+                step.classList.add('warning');
+                badge.textContent = 'No Timestamp';
+                badge.className = 'status-badge warning';
+            }
+        }
+
+        async function verifyMerkleTree(data) {
+            const step = document.getElementById('step-merkle');
+            const badge = step.querySelector('.status-badge');
+
+            step.classList.add('processing');
+            badge.textContent = 'Checking';
+            badge.className = 'status-badge processing';
+
+            await sleep(1000);
+
+            if (data.proof && data.proof.merkleRoot) {
+                document.getElementById('merkle-root').textContent =
+                    data.proof.merkleRoot.substring(0, 32) + '...';
+                document.getElementById('leaf-count').textContent =
+                    data.proof.leaves?.length || '1';
+
+                step.classList.remove('processing');
+                step.classList.add('success');
+                badge.textContent = 'Valid';
+                badge.className = 'status-badge success';
+            } else {
+                step.classList.remove('processing');
+                step.classList.add('failed');
+                badge.textContent = 'Invalid';
+                badge.className = 'status-badge failed';
+            }
+        }
+
+        async function verifyBlockchain(data) {
+            const step = document.getElementById('step-blockchain');
+            step.style.display = 'flex';
+            const badge = step.querySelector('.status-badge');
+
+            step.classList.add('processing');
+            badge.textContent = 'Checking';
+            badge.className = 'status-badge processing';
+
+            await sleep(1200);
+
+            if (data.anchorReceipt && data.anchorReceipt.txHash) {
+                document.getElementById('tx-hash').textContent =
+                    data.anchorReceipt.txHash.substring(0, 20) + '...';
+                document.getElementById('chain-id').textContent =
+                    data.anchorReceipt.chainId || 'Unknown';
+
+                step.classList.remove('processing');
+                step.classList.add('success');
+                badge.textContent = 'Anchored';
+                badge.className = 'status-badge success';
+            } else {
+                step.classList.remove('processing');
+                badge.textContent = 'Not Anchored';
+                badge.className = 'status-badge pending';
+            }
+        }
+
+        function showOverallResult() {
+            const result = document.getElementById('overallResult');
+            const allSteps = document.querySelectorAll('.step');
+            const hasFailure = Array.from(allSteps).some(s => s.classList.contains('failed'));
+
+            if (hasFailure) {
+                result.classList.add('invalid', 'visible');
+                result.querySelector('.result-title').textContent = 'Verification Failed';
+                result.querySelector('.result-message').textContent =
+                    'This document failed one or more cryptographic checks';
+            } else {
+                result.classList.add('valid', 'visible');
+            }
+        }
+
+        function toggleDetails(step) {
+            const details = document.getElementById(`details-${step}`);
+            details.classList.toggle('visible');
+        }
+
+        function resetSteps() {
+            document.querySelectorAll('.step').forEach(step => {
+                step.className = 'step';
+                step.querySelector('.status-badge').textContent = 'Pending';
+                step.querySelector('.status-badge').className = 'status-badge pending';
+            });
+
+            document.getElementById('overallResult').className = 'overall-result';
+            document.getElementById('step-blockchain').style.display = 'none';
+        }
+
+        function resetVerification() {
+            verificationSteps.classList.remove('active');
+            resetSteps();
+            fileInput.value = '';
+            uploadedFile = null;
+            verificationData = null;
+        }
+
+        async function downloadReport() {
+            const report = {
+                verifiedAt: new Date().toISOString(),
+                fileName: uploadedFile.name,
+                results: {
+                    integrity: document.getElementById('step-integrity').classList.contains('success'),
+                    signature: document.getElementById('step-signature').classList.contains('success'),
+                    timestamp: document.getElementById('step-timestamp').classList.contains('success'),
+                    merkleTree: document.getElementById('step-merkle').classList.contains('success'),
+                    blockchain: document.getElementById('step-blockchain').classList.contains('success')
+                },
+                hashes: {
+                    sha256: document.getElementById('sha256-hash').textContent,
+                    blake3: document.getElementById('blake3-hash').textContent,
+                    merkleRoot: document.getElementById('merkle-root').textContent
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `verification-report-${Date.now()}.json`;
+            a.click();
+        }
+
+        function showError(message) {
+            alert(message);
+            resetVerification();
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

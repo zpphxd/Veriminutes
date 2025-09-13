@@ -18,18 +18,41 @@ class StorageService:
         date: Optional[str] = None,
         title: Optional[str] = None
     ) -> str:
-        """Create a slug for the session."""
+        """Create a slug for the session with automatic versioning."""
 
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
 
-        slug = date
+        base_slug = date
 
         if title:
             title_slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
-            slug = f"{date}-{title_slug}"
+            base_slug = f"{date}-{title_slug}"
 
-        return slug
+        # Check if this exact slug already exists
+        final_slug = base_slug
+        session_dir = self.output_dir / final_slug
+
+        if session_dir.exists():
+            # Add timestamp to make it unique (HH:MM:SS format)
+            timestamp = datetime.now().strftime("%H%M%S")
+            final_slug = f"{base_slug}-{timestamp}"
+
+            # Store version metadata
+            version_meta = self.output_dir / final_slug / "version.json"
+            if not version_meta.exists():
+                session_dir = self.get_session_dir(final_slug)
+                version_info = {
+                    "original_slug": base_slug,
+                    "version_time": datetime.now().isoformat(),
+                    "version_timestamp": timestamp,
+                    "is_version": True
+                }
+                (session_dir / "version.json").write_text(
+                    json.dumps(version_info, indent=2)
+                )
+
+        return final_slug
 
     def get_session_dir(self, slug: str) -> Path:
         """Get or create session directory."""

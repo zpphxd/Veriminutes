@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  veriminutes:
+    build: .
+    container_name: veriminutes
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./output:/app/output
+    environment:
+      - PORT=8787
+      - HOST=0.0.0.0
+      - OUTPUT_DIR=/app/output
+    restart: unless-stopped

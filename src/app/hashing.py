@@ -135,3 +135,7 @@ class HashingService:
             )
         except Exception:
             return False
+
+
+# Alias for backward compatibility
+Hasher = HashingService

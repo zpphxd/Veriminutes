@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Input Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 50px;
+            background: #f0f0f0;
+        }
+        .test-area {
+            background: white;
+            border: 2px dashed #999;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-area:hover {
+            background: #f9f9f9;
+            border-color: #666;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Input Debug Test</h1>
+
+    <h2>Test 1: Simple File Input</h2>
+    <input type="file" id="test1" accept=".txt">
+    <div id="result1" class="result"></div>
+
+    <h2>Test 2: Hidden Input with Button</h2>
+    <button onclick="document.getElementById('test2').click()">Click to Browse (Method 1)</button>
+    <input type="file" id="test2" accept=".txt" style="display: none;">
+    <div id="result2" class="result"></div>
+
+    <h2>Test 3: Click Area with Hidden Input</h2>
+    <div class="test-area" id="testArea3">
+        Click this area to browse
+    </div>
+    <input type="file" id="test3" accept=".txt" style="display: none;">
+    <div id="result3" class="result"></div>
+
+    <h2>Test 4: Your Current Implementation</h2>
+    <div class="test-area" id="uploadArea">
+        <p>Drop your .txt transcript here</p>
+        <p>or click to browse</p>
+    </div>
+    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    <div id="result4" class="result"></div>
+
+    <h2>Console Output:</h2>
+    <pre id="console" style="background: #333; color: #0f0; padding: 20px; border-radius: 4px; min-height: 100px;"></pre>
+
+    <script>
+        const log = (msg) => {
+            const console = document.getElementById('console');
+            console.textContent += msg + '\n';
+            console.scrollTop = console.scrollHeight;
+        };
+
+        // Test 1: Direct file input
+        document.getElementById('test1').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('result1').style.display = 'block';
+                document.getElementById('result1').textContent = `Selected: ${file.name}`;
+                log(`Test 1: Selected ${file.name}`);
+            }
+        });
+
+        // Test 2: Hidden input with button
+        document.getElementById('test2').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('result2').style.display = 'block';
+                document.getElementById('result2').textContent = `Selected: ${file.name}`;
+                log(`Test 2: Selected ${file.name}`);
+            }
+        });
+
+        // Test 3: Click area
+        document.getElementById('testArea3').addEventListener('click', (e) => {
+            log('Test 3: Click event fired');
+            document.getElementById('test3').click();
+            log('Test 3: Triggered file input click');
+        });
+
+        document.getElementById('test3').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('result3').style.display = 'block';
+                document.getElementById('result3').textContent = `Selected: ${file.name}`;
+                log(`Test 3: Selected ${file.name}`);
+            }
+        });
+
+        // Test 4: Your implementation
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        // Your current code (simplified)
+        uploadArea.addEventListener('click', (e) => {
+            log('Test 4: Upload area clicked');
+            e.preventDefault();
+            log('Test 4: preventDefault called');
+            fileInput.click();
+            log('Test 4: fileInput.click() called');
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            log('Test 4: File input change event');
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('result4').style.display = 'block';
+                document.getElementById('result4').textContent = `Selected: ${file.name}`;
+                log(`Test 4: Selected ${file.name}`);
+            }
+        });
+
+        // Add click listener to detect if file input actually receives the click
+        fileInput.addEventListener('click', (e) => {
+            log('Test 4: File input received click event');
+        });
+
+        log('Page loaded - all tests ready');
+        log('Browser: ' + navigator.userAgent.substring(0, 50) + '...');
+    </script>
+</body>
+</html>

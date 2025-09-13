@@ -304,6 +304,7 @@
                 <nav style="display: flex; gap: 2rem;">
                     <a href="/" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Upload</a>
                     <a href="/record.html" style="color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem;">Record</a>
+                    <a href="/verify.html" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Verify</a>
                 </nav>
             </div>
         </div>
@@ -331,6 +332,9 @@
                             <option value="real">Real Audio (Microphone)</option>
                             <option value="demo">Demo Mode (Simulated)</option>
                         </select>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+                            Real Audio uses your microphone and Whisper AI for transcription
+                        </small>
                     </div>
 
                     <div class="form-group">
@@ -415,6 +419,8 @@
             formData.append('attendees', attendees);
             formData.append('auto_verify', autoVerify);
             formData.append('use_real_audio', recordMode === 'real');
+
+            console.log('Starting recording with mode:', recordMode);
 
             try {
                 const response = await fetch(`${API_URL}/meeting/start`, {

@@ -168,3 +168,21 @@ class MerkleTree:
             return result["merkleRoot"] == proof["merkleRoot"]
         except Exception:
             return False
+
+    def verify_content_against_root(
+        self,
+        content: str,
+        expected_root: str
+    ) -> bool:
+        """Verify that content produces the expected Merkle root."""
+        try:
+            # Convert content to bytes and build tree
+            data = content.encode('utf-8')
+            chunks = self._chunk_data(data)
+            self.leaves = [self._hash_chunk(chunk) for chunk in chunks]
+            self._build_tree()
+
+            # Check if computed root matches expected
+            return self.root == expected_root
+        except Exception:
+            return False

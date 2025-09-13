@@ -30,8 +30,9 @@ class SimpleMeetingRecorder:
         self.meeting_title = "Meeting"
         self.attendees = []
         self.verifier = VeriMinutesService()
+        self.use_demo = False
 
-    def start_recording(self, meeting_title: str, attendees: List[str]) -> Dict:
+    def start_recording(self, meeting_title: str, attendees: List[str], use_real_audio: bool = True) -> Dict:
         """Start recording audio using system commands."""
 
         if self.is_recording:
@@ -39,26 +40,122 @@ class SimpleMeetingRecorder:
 
         # Create temp file for audio
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.audio_file = f"output/recordings/meeting_{timestamp}.m4a"
+        self.audio_file = f"output/recordings/meeting_{timestamp}.wav"  # Use WAV for better compatibility
         Path(self.audio_file).parent.mkdir(parents=True, exist_ok=True)
 
-        # Use macOS's built-in audio recording (sox or ffmpeg on other systems)
-        # For macOS, we'll use a simple approach with sox if available
-        try:
-            # Check if sox is available
-            subprocess.run(["which", "sox"], check=True, capture_output=True)
+        # If explicitly demo mode or real audio disabled, use demo
+        if not use_real_audio:
+            print("📝 Using demo mode as requested")
+            self.is_recording = True
+            self.start_time = time.time()
+            self.meeting_title = meeting_title
+            self.attendees = attendees
+            self.use_demo = True
 
-            # Start recording with sox
-            self.recording_process = subprocess.Popen([
-                "sox", "-d", self.audio_file
-            ])
+            return {
+                "status": "recording",
+                "mode": "demo",
+                "message": "Demo recording started - call /meeting/stop to complete",
+                "start_time": datetime.now().isoformat()
+            }
+
+        # Use ffmpeg for audio recording (works on macOS)
+        try:
+            # Check if ffmpeg is available
+            subprocess.run(["which", "ffmpeg"], check=True, capture_output=True)
+
+            # List available audio devices first
+            list_devices = subprocess.run([
+                "ffmpeg", "-f", "avfoundation", "-list_devices", "true", "-i", ""
+            ], capture_output=True, text=True)
+
+            print("📱 Available audio devices:")
+            audio_devices = []
+            for line in list_devices.stderr.split('\n'):
+                if '[AVFoundation indev @' in line and 'audio devices' not in line.lower():
+                    # Extract device index and name
+                    if '[' in line:
+                        device_info = line.split(']', 1)[1].strip() if ']' in line else line
+                        print(f"  {line.strip()}")
+                        # Try to extract device index
+                        if '[' in line:
+                            device_idx = line.split('[')[1].split(']')[0]
+                            audio_devices.append(device_idx)
+
+            # Try different audio input methods in order of preference
+            recording_started = False
+
+            # Method 1: Try with explicit device index
+            for device_idx in audio_devices:
+                if recording_started:
+                    break
+
+                print(f"🎤 Trying audio device [{device_idx}]...")
+                self.recording_process = subprocess.Popen([
+                    "ffmpeg",
+                    "-f", "avfoundation",
+                    "-i", f":{device_idx}",  # Use device index
+                    "-ar", "16000",
+                    "-ac", "1",
+                    "-acodec", "pcm_s16le",
+                    "-y",
+                    self.audio_file
+                ], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+                # Check if it started successfully
+                time.sleep(0.5)
+                if self.recording_process.poll() is None:
+                    print(f"✅ Recording started with device [{device_idx}]")
+                    recording_started = True
+                    break
+                else:
+                    stderr = self.recording_process.stderr.read().decode()[:200]
+                    print(f"   Failed: {stderr}")
+
+            # Method 2: Try with explicit device names
+            if not recording_started:
+                device_names = [":MacBook Pro Microphone", ":0", ":default"]
+                for device_name in device_names:
+                    print(f"🎤 Trying device name: {device_name}")
+                    self.recording_process = subprocess.Popen([
+                        "ffmpeg",
+                        "-f", "avfoundation",
+                        "-i", device_name,
+                        "-ar", "16000",
+                        "-ac", "1",
+                        "-acodec", "pcm_s16le",
+                        "-y",
+                        self.audio_file
+                    ], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+                    time.sleep(0.5)
+                    if self.recording_process.poll() is None:
+                        print(f"✅ Recording started with {device_name}")
+                        recording_started = True
+                        break
+
+            if recording_started:
+                print(f"🎙️ Recording audio to {self.audio_file}")
+                print("🔴 RECORDING NOW - Please speak clearly into your microphone")
+            else:
+                print("❌ Failed to start audio recording with any method")
+                raise subprocess.CalledProcessError(1, "ffmpeg", "No audio device could be accessed")
 
         except subprocess.CalledProcessError:
             # Fallback: create a mock recording for demo
-            print("⚠️ Audio recording not available - creating demo transcript")
+            print("⚠️ ffmpeg not found - using demo mode")
+            self.is_recording = True
+            self.start_time = time.time()
             self.meeting_title = meeting_title
             self.attendees = attendees
-            return self._create_demo_recording(meeting_title, attendees)
+            self.use_demo = True
+
+            return {
+                "status": "recording",
+                "mode": "demo",
+                "message": "Demo recording started - call /meeting/stop to complete",
+                "start_time": datetime.now().isoformat()
+            }
 
         self.is_recording = True
         self.start_time = time.time()
@@ -77,10 +174,37 @@ class SimpleMeetingRecorder:
         if not self.is_recording:
             return {"error": "Not recording"}
 
+        # If in demo mode, create demo transcript
+        if self.use_demo:
+            self.is_recording = False
+            duration = time.time() - self.start_time if self.start_time else 0
+            result = self._create_demo_recording(self.meeting_title, self.attendees)
+            result["duration"] = duration
+            # Reset state
+            self.use_demo = False
+            self.start_time = None
+            return result
+
         # Stop the recording process
         if self.recording_process:
-            self.recording_process.terminate()
-            self.recording_process.wait()
+            try:
+                self.recording_process.terminate()
+                stdout, stderr = self.recording_process.communicate(timeout=2)
+                if stderr:
+                    stderr_text = stderr.decode()
+                    # Look for audio level information
+                    if 'mean_volume' in stderr_text or 'max_volume' in stderr_text:
+                        print(f"📢 Audio levels from recording:")
+                        for line in stderr_text.split('\n'):
+                            if 'volume' in line.lower():
+                                print(f"   {line.strip()}")
+                    else:
+                        print(f"⚠️ FFmpeg output: {stderr_text[:500]}")
+            except subprocess.TimeoutExpired:
+                self.recording_process.kill()
+                self.recording_process.wait()
+            except Exception as e:
+                print(f"Error stopping recording process: {e}")
 
         self.is_recording = False
         duration = time.time() - self.start_time if self.start_time else 0
@@ -88,6 +212,11 @@ class SimpleMeetingRecorder:
         # Process and verify
         result = self._process_and_verify()
         result["duration"] = duration
+
+        # Reset state
+        self.recording_process = None
+        self.audio_file = None
+        self.start_time = None
 
         return result
 
@@ -191,20 +320,127 @@ Meeting adjourned. Thank you everyone.
     def _process_and_verify(self) -> Dict:
         """Process the recording and verify."""
 
-        # For demo, create a simple transcript
+        # Create transcript from audio using Whisper
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         transcript_file = f"output/transcripts/meeting_{timestamp}.txt"
         Path(transcript_file).parent.mkdir(parents=True, exist_ok=True)
 
-        # Create basic transcript (in production, would use speech-to-text)
-        with open(transcript_file, 'w') as f:
-            f.write(f"Meeting: {self.meeting_title}\n")
-            f.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
-            f.write(f"Attendees: {', '.join(self.attendees)}\n\n")
-            f.write("Speaker 1  0:00\n")
-            f.write("This is a recorded meeting transcript.\n\n")
-            f.write("Speaker 2  0:10\n")
-            f.write("Audio recording completed successfully.\n")
+        # Check if audio file exists and has content
+        if self.audio_file and Path(self.audio_file).exists():
+            file_size = Path(self.audio_file).stat().st_size
+            print(f"📊 Audio file size: {file_size} bytes")
+
+            if file_size > 1000:  # At least 1KB of audio
+                # First, analyze the audio file to check if it contains sound
+                try:
+                    # Use ffmpeg to check audio levels
+                    audio_check = subprocess.run([
+                        "ffmpeg", "-i", self.audio_file, "-af", "volumedetect", "-f", "null", "-"
+                    ], capture_output=True, text=True, timeout=10)
+
+                    if audio_check.stderr:
+                        print("📢 Audio analysis:")
+                        for line in audio_check.stderr.split('\n'):
+                            if 'mean_volume' in line or 'max_volume' in line:
+                                print(f"   {line.strip()}")
+                                # Check if audio is too quiet (below -60 dB is essentially silence)
+                                if 'mean_volume' in line:
+                                    try:
+                                        volume = float(line.split(':')[1].strip().split()[0])
+                                        if volume < -60:
+                                            print("⚠️ WARNING: Audio appears to be silent or very quiet!")
+                                            print("🎙️ Please ensure:")
+                                            print("   1. Your microphone is not muted")
+                                            print("   2. Terminal/IDE has microphone permission in System Settings")
+                                            print("   3. You're speaking close enough to the microphone")
+                                    except:
+                                        pass
+                except Exception as e:
+                    print(f"Could not analyze audio levels: {e}")
+
+                # Try to transcribe with Whisper
+                try:
+                    print("🎯 Transcribing audio with Whisper...")
+                    import whisper
+
+                    # Load Whisper model (base is fast and good enough)
+                    model = whisper.load_model("base")
+
+                    # Transcribe the audio with adjusted parameters for low volume
+                    result = model.transcribe(
+                        self.audio_file,
+                        language="en",
+                        fp16=False,  # Use FP32 for better accuracy
+                        verbose=True  # Show progress
+                    )
+
+                    print(f"📝 Whisper result: {result.get('text', '')[:100]}...")
+
+                    # Format transcript in Otter.ai style
+                    with open(transcript_file, 'w') as f:
+                        f.write(f"{self.meeting_title}\n")
+                        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
+                        f.write(f"Attendees: {', '.join(self.attendees)}\n\n")
+
+                        # Check if we got any text at all
+                        full_text = result.get("text", "").strip()
+
+                        if full_text:
+                            # Write the transcribed text with segments if available
+                            segments = result.get("segments", [])
+                            if segments:
+                                for segment in segments:
+                                    timestamp_min = int(segment['start'] // 60)
+                                    timestamp_sec = int(segment['start'] % 60)
+                                    text = segment['text'].strip()
+                                    if text:
+                                        f.write(f"Speaker  {timestamp_min}:{timestamp_sec:02d}\n")
+                                        f.write(f"{text}\n\n")
+                            else:
+                                # No segments, just write the full text
+                                f.write("Speaker  0:00\n")
+                                f.write(full_text + "\n")
+                        else:
+                            # No speech detected
+                            f.write("Speaker  0:00\n")
+                            f.write("[No speech detected in audio. Please speak clearly into microphone.]\n")
+                            print("⚠️ No speech detected by Whisper")
+
+                    print(f"✅ Transcription complete: {transcript_file}")
+
+                except ImportError:
+                    print("⚠️ Whisper not installed. Installing...")
+                    subprocess.run([
+                        "pip3", "install", "openai-whisper"
+                    ], capture_output=True)
+                    print("Please restart the application and try again.")
+                    return {"error": "Whisper installed. Please restart and try again."}
+
+                except Exception as e:
+                    print(f"❌ Transcription error: {e}")
+                    # Create basic transcript as fallback
+                    with open(transcript_file, 'w') as f:
+                        f.write(f"Meeting: {self.meeting_title}\n")
+                        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
+                        f.write(f"Attendees: {', '.join(self.attendees)}\n\n")
+                        f.write("Speaker  0:00\n")
+                        f.write("[Audio recorded but transcription failed]\n")
+            else:
+                print("⚠️ Audio file too small, using placeholder")
+                with open(transcript_file, 'w') as f:
+                    f.write(f"Meeting: {self.meeting_title}\n")
+                    f.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
+                    f.write(f"Attendees: {', '.join(self.attendees)}\n\n")
+                    f.write("Speaker  0:00\n")
+                    f.write("[No audio content recorded]\n")
+        else:
+            print("⚠️ No audio file found")
+            with open(transcript_file, 'w') as f:
+                f.write(f"Meeting: {self.meeting_title}\n")
+                f.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
+                f.write(f"Attendees: {', '.join(self.attendees)}\n\n")
+                f.write("Speaker  0:00\n")
+                f.write("This is a recorded meeting transcript.\n")
 
         return self._process_transcript(transcript_file)
 

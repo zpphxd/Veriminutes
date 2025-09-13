@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Upload Issue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 50px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .upload-area {
+            background: #2a2a2a;
+            border: 2px dashed #666;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .upload-area:hover {
+            background: #333;
+            border-color: #00ff88;
+        }
+        #debug {
+            background: black;
+            color: #00ff00;
+            padding: 20px;
+            font-family: monospace;
+            white-space: pre;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug: File Upload Click Issue</h1>
+
+    <div class="upload-area" id="uploadArea">
+        <p>Drop your .txt transcript here</p>
+        <p>or click to browse</p>
+        <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    </div>
+
+    <button onclick="debugFileInput()">Debug File Input</button>
+    <button onclick="testClick()">Test Click Programmatically</button>
+    <button onclick="location.href='http://localhost:8787'">Go to Real App</button>
+
+    <div id="debug"></div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const debug = document.getElementById('debug');
+        let logs = [];
+
+        function log(msg) {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const entry = `[${timestamp}] ${msg}`;
+            logs.push(entry);
+            debug.textContent = logs.join('\n');
+            console.log(msg);
+        }
+
+        // Check initial state
+        log('=== INITIAL STATE ===');
+        log('Upload area found: ' + (uploadArea ? 'YES' : 'NO'));
+        log('File input found: ' + (fileInput ? 'YES' : 'NO'));
+        log('File input parent: ' + (fileInput.parentElement === uploadArea ? 'Inside uploadArea ✓' : 'NOT inside uploadArea ✗'));
+        log('File input display: ' + window.getComputedStyle(fileInput).display);
+        log('File input visibility: ' + window.getComputedStyle(fileInput).visibility);
+
+        // Add click handler exactly like the real app
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target === fileInput) {
+                log('Click: Ignored (clicked on input itself)');
+                return;
+            }
+
+            log('Click: Upload area clicked');
+            log('Click: Event target = ' + e.target.tagName + (e.target.id ? '#' + e.target.id : ''));
+
+            setTimeout(() => {
+                log('Click: Calling fileInput.click()');
+                try {
+                    fileInput.click();
+                    log('Click: fileInput.click() succeeded');
+                } catch (err) {
+                    log('Click: ERROR - ' + err.message);
+                }
+            }, 0);
+        });
+
+        // Monitor file input events
+        fileInput.addEventListener('click', function(e) {
+            log('FileInput: Click event received');
+        });
+
+        fileInput.addEventListener('focus', function(e) {
+            log('FileInput: Focus event received');
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            log('FileInput: Change event - file selected');
+            if (e.target.files.length > 0) {
+                log('FileInput: Selected file = ' + e.target.files[0].name);
+            }
+        });
+
+        // Test functions
+        function debugFileInput() {
+            log('\n=== DEBUG CHECK ===');
+            log('fileInput element: ' + fileInput);
+            log('fileInput.click is function: ' + (typeof fileInput.click === 'function'));
+            log('fileInput disabled: ' + fileInput.disabled);
+            log('fileInput readonly: ' + fileInput.readOnly);
+
+            // Check if any handlers are preventing default
+            const handlers = uploadArea.onclick || uploadArea.addEventListener;
+            log('uploadArea has onclick: ' + (uploadArea.onclick ? 'YES' : 'NO'));
+
+            // Try direct click
+            log('\nTrying direct fileInput.click()...');
+            fileInput.click();
+        }
+
+        function testClick() {
+            log('\n=== PROGRAMMATIC CLICK TEST ===');
+            uploadArea.click();
+        }
+
+        log('\n=== READY ===');
+        log('Try clicking the upload area above');
+    </script>
+</body>
+</html>

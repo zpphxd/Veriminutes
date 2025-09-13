@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/app/api.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/app/api.py"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "static/$1"
+    }
+  ],
+  "functions": {
+    "src/app/api.py": {
+      "runtime": "python3.9",
+      "maxDuration": 30
+    }
+  }
+}

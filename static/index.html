@@ -204,6 +204,12 @@
             display: none;
         }
 
+        .status.info {
+            background: #e8f4f8;
+            color: #0066cc;
+            border: 1px solid #b3d9f2;
+        }
+
         .status.success {
             background: rgba(0, 255, 136, 0.1);
             border: 1px solid var(--accent);
@@ -303,6 +309,11 @@
             to { transform: rotate(360deg); }
         }
 
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .footer {
             background: var(--bg-secondary);
             border-top: 1px solid var(--border);
@@ -327,6 +338,7 @@
                 <nav style="display: flex; gap: 2rem;">
                     <a href="/" style="color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem;">Upload</a>
                     <a href="/record.html" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Record</a>
+                    <a href="/verify.html" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Verify</a>
                 </nav>
             </div>
         </div>
@@ -345,7 +357,7 @@
                     </svg>
                     <p class="upload-text">Drop your .txt transcript here</p>
                     <p class="upload-hint">or click to browse</p>
-                    <input type="file" id="fileInput" accept=".txt">
+                    <input type="file" id="fileInput" accept=".txt" style="display: none;">
                 </div>
 
                 <div id="fileDetails" style="display: none; margin-top: 2rem;">
@@ -400,8 +412,20 @@
         // Set today's date by default
         document.getElementById('date').valueAsDate = new Date();
 
-        // Upload area events
-        uploadArea.addEventListener('click', () => fileInput.click());
+        // Upload area events - robust file picker trigger
+        uploadArea.addEventListener('click', function(e) {
+            // Don't process if clicking on the input itself
+            if (e.target === fileInput) return;
+
+            console.log('Upload area clicked');
+
+            // Use a timeout to ensure the click propagates properly
+            // This helps with Safari and some browser security policies
+            setTimeout(() => {
+                fileInput.click();
+                console.log('File input clicked');
+            }, 0);
+        });
 
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -423,8 +447,15 @@
         });
 
         fileInput.addEventListener('change', (e) => {
+            console.log('File input changed:', e.target.files);
             if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
+                const file = e.target.files[0];
+                console.log('Selected file:', file.name, file.type, file.size);
+                if (!file.name.endsWith('.txt')) {
+                    showStatus('Please select a .txt file', 'error');
+                    return;
+                }
+                handleFileSelect(file);
             }
         });
 
@@ -437,14 +468,23 @@
         });
 
         function handleFileSelect(file) {
+            console.log('Handling file:', file);
             selectedFile = file;
             uploadArea.style.display = 'none';
             fileDetails.style.display = 'block';
             document.getElementById('title').value = file.name.replace('.txt', '').replace(/-/g, ' ').replace(/_/g, ' ');
+
+            // Show file info
+            const sizeKB = (file.size / 1024).toFixed(2);
+            showStatus(`Selected: ${file.name} (${sizeKB} KB)`, 'info');
         }
 
         processButton.addEventListener('click', async () => {
-            if (!selectedFile) return;
+            console.log('Process button clicked, file:', selectedFile);
+            if (!selectedFile) {
+                showStatus('No file selected', 'error');
+                return;
+            }
 
             const title = document.getElementById('title').value;
             const date = document.getElementById('date').value;
@@ -465,6 +505,14 @@
             formData.append('attendees', attendees);
 
             try {
+                console.log('Uploading to:', `${API_URL}/upload`);
+                console.log('FormData contents:', {
+                    file: selectedFile.name,
+                    title: title,
+                    date: date,
+                    attendees: attendees
+                });
+
                 const response = await fetch(`${API_URL}/upload`, {
                     method: 'POST',
                     body: formData
@@ -483,36 +531,64 @@
                     if (buildResponse.ok) {
                         const buildResult = await buildResponse.json();
 
-                        // Show success with download links
+                        // Check if this is a versioned upload
+                        const isVersion = result.slug.includes('-') &&
+                                         result.slug.match(/-\d{6}$/);
+                        const versionNote = isVersion ?
+                            `<div style="background: rgba(255,165,0,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem;">
+                                🔄 Note: A previous version exists. This has been saved as a new version (${result.slug.split('-').pop()})
+                            </div>` : '';
+
+                        // Show prominent success with download links
                         statusDiv.innerHTML = `
-                            <div style="margin-bottom: 1rem;">Transcript processed and verified successfully!</div>
-                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                                <a href="${API_URL}/download/${result.slug}/pdf" class="button button-secondary" style="text-decoration: none;">
-                                    Download PDF
+                            <div style="font-size: 1.2rem; margin-bottom: 1rem; font-weight: bold;">
+                                ✅ Success! Transcript Stamped and Verified
+                            </div>
+                            ${versionNote}
+                            <div style="margin-bottom: 1rem; opacity: 0.9;">
+                                Your meeting "${title}" has been cryptographically sealed and is now tamper-proof.
+                            </div>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                                <a href="${API_URL}/download/${result.slug}/pdf" class="button" style="text-decoration: none; background: var(--accent); color: var(--bg-primary);">
+                                    📄 Download PDF
                                 </a>
                                 <a href="${API_URL}/download/${result.slug}/packet" class="button button-secondary" style="text-decoration: none;">
-                                    Download Proof Packet
+                                    🔒 Download Proof Packet
                                 </a>
                                 <button class="button button-secondary" onclick="verifySession('${result.slug}')">
-                                    Verify Hash
+                                    ✓ Verify Hash
                                 </button>
                             </div>
                         `;
                         statusDiv.className = 'status success';
                         statusDiv.style.display = 'block';
+                        statusDiv.style.padding = '2rem';
+                        statusDiv.style.animation = 'pulse 0.5s ease-in-out';
 
+                        // Immediately refresh the sessions list and highlight new session
+                        loadSessions(result.slug);
+
+                        // Scroll to status
+                        statusDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Reset form after longer delay
                         setTimeout(() => {
                             selectedFile = null;
                             fileDetails.style.display = 'none';
                             uploadArea.style.display = 'block';
                             fileInput.value = '';
-                            loadSessions();
-                        }, 10000);
+                            // Fade out status after reset
+                            statusDiv.style.opacity = '0.7';
+                        }, 15000);
+                    }
+                    } else {
+                        showStatus('Build failed: ' + (buildResult?.detail || 'Unknown error'), 'error');
                     }
                 } else {
-                    showStatus(result.detail || 'Processing failed', 'error');
+                    showStatus(result.detail || 'Upload failed', 'error');
                 }
             } catch (error) {
+                console.error('Upload error:', error);
                 showStatus('Network error: ' + error.message, 'error');
             } finally {
                 processButton.disabled = false;
@@ -526,16 +602,25 @@
             statusDiv.style.display = 'block';
         }
 
-        async function loadSessions() {
+        async function loadSessions(highlight = null) {
             try {
+                // Show loading state
+                sessionList.style.opacity = '0.5';
+
                 const response = await fetch(`${API_URL}/sessions`);
                 const data = await response.json();
 
                 sessionList.innerHTML = '';
+                sessionList.style.opacity = '1';
 
                 if (data.sessions && data.sessions.length > 0) {
                     data.sessions.forEach(session => {
                         const card = createSessionCard(session);
+                        // Highlight new session
+                        if (highlight && session.slug === highlight) {
+                            card.style.border = '2px solid var(--accent)';
+                            card.style.animation = 'pulse 2s';
+                        }
                         sessionList.appendChild(card);
                     });
                 } else {
@@ -599,20 +684,21 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Remove the item from the UI
-                    const item = document.getElementById(`session-${slug}`);
-                    if (item) {
-                        item.style.transition = 'opacity 0.3s';
-                        item.style.opacity = '0';
-                        setTimeout(() => item.remove(), 300);
-                    }
+                    // Refresh the entire sessions list
+                    loadSessions();
 
-                    // Check if list is empty
-                    setTimeout(() => {
-                        if (sessionList.children.length === 0) {
-                            sessionList.innerHTML = '<p style="color: var(--text-secondary); padding: 1rem;">No sessions yet</p>';
-                        }
-                    }, 350);
+                    // Show success message briefly
+                    const tempStatus = document.createElement('div');
+                    tempStatus.className = 'status success';
+                    tempStatus.textContent = 'Session deleted successfully';
+                    tempStatus.style.marginBottom = '1rem';
+                    sessionList.parentElement.insertBefore(tempStatus, sessionList);
+                    setTimeout(() => tempStatus.remove(), 3000);
+
+                    // Check if list is empty after deletion
+                    if (sessionList.children.length === 0) {
+                        sessionList.innerHTML = '<p style="color: var(--text-secondary); padding: 1rem;">No sessions yet</p>';
+                    }
                 } else {
                     alert('Failed to delete session: ' + (result.detail || 'Unknown error'));
                 }
