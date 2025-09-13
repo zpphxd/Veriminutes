@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriMinutes - Live Meeting Recorder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .icon {
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .button-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-idle { background: #6c757d; }
+        .status-ready { background: #28a745; }
+        .status-recording {
+            background: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .timer {
+            font-size: 2em;
+            font-weight: 300;
+            color: #333;
+            text-align: center;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .transcript-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .transcript-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .transcript-speaker {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .transcript-text {
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .transcript-time {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .speakers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .speaker-badge {
+            padding: 5px 15px;
+            background: #e8e8ff;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .audio-visualizer {
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .audio-bar {
+            position: absolute;
+            bottom: 0;
+            width: 4px;
+            background: #667eea;
+            transition: height 0.1s ease;
+        }
+
+        .enrollment-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            padding: 10px;
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success-message {
+            padding: 10px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .verification-result {
+            padding: 20px;
+            background: #d4edda;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .verification-result.failed {
+            background: #f8d7da;
+        }
+
+        .mic-permission {
+            padding: 15px;
+            background: #fff3cd;
+            color: #856404;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ VeriMinutes Live</h1>
+            <p class="subtitle">Record meetings with automatic speaker identification and verification</p>
+        </div>
+
+        <div class="mic-permission" id="micPermission">
+            🎤 Please allow microphone access to start recording meetings
+        </div>
+
+        <div class="main-grid">
+            <!-- Control Panel -->
+            <div class="card">
+                <h2><span class="icon">⚙️</span> Meeting Setup</h2>
+
+                <div class="form-group">
+                    <label for="meetingTitle">Meeting Title</label>
+                    <input type="text" id="meetingTitle" placeholder="e.g., Q3 Board Meeting">
+                </div>
+
+                <div class="form-group">
+                    <label for="attendees">Expected Attendees</label>
+                    <input type="text" id="attendees" placeholder="e.g., Alice, Bob, Carol">
+                </div>
+
+                <div class="form-group">
+                    <label for="autoVerify">Auto-Verification</label>
+                    <select id="autoVerify">
+                        <option value="true">Enabled - Verify when meeting ends</option>
+                        <option value="false">Disabled - Manual verification</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button id="startButton" class="button button-primary">
+                        <span class="status-indicator status-idle"></span>
+                        Start Meeting
+                    </button>
+                    <button id="stopButton" class="button button-danger" disabled>
+                        Stop Meeting
+                    </button>
+                </div>
+
+                <div class="timer" id="timer">00:00:00</div>
+
+                <!-- Audio Visualizer -->
+                <div class="audio-visualizer" id="visualizer">
+                    <!-- Audio bars will be added dynamically -->
+                </div>
+
+                <!-- Speaker Enrollment -->
+                <div class="enrollment-section">
+                    <h3>🎓 Speaker Training</h3>
+                    <p style="margin: 10px 0; color: #666;">Train the system to recognize speakers</p>
+
+                    <div class="form-group">
+                        <input type="text" id="speakerName" placeholder="Speaker name">
+                    </div>
+
+                    <button id="enrollButton" class="button button-secondary">
+                        Record Voice Sample (10s)
+                    </button>
+                </div>
+
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+            </div>
+
+            <!-- Live Transcript -->
+            <div class="card">
+                <h2><span class="icon">📝</span> Live Transcript</h2>
+
+                <div class="speakers-list" id="speakersList">
+                    <!-- Speaker badges will appear here -->
+                </div>
+
+                <div class="transcript-container" id="transcriptContainer">
+                    <div style="color: #999; text-align: center; padding: 50px;">
+                        Start a meeting to see live transcription...
+                    </div>
+                </div>
+
+                <div id="verificationResult" class="verification-result">
+                    <h3>✅ Meeting Verified</h3>
+                    <p>All artifacts have been cryptographically secured</p>
+                    <div style="margin-top: 15px;">
+                        <strong>Document Hash:</strong> <code id="docHash"></code><br>
+                        <strong>Merkle Root:</strong> <code id="merkleRoot"></code>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button id="downloadPDF" class="button button-primary">Download PDF</button>
+                        <button id="downloadPacket" class="button button-secondary">Download Packet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection for real-time updates
+        let ws = null;
+        let isRecording = false;
+        let meetingSlug = null;
+        let startTime = null;
+        let timerInterval = null;
+        let audioContext = null;
+        let microphone = null;
+        let analyser = null;
+
+        // Initialize audio context
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+
+                // Create analyser for visualization
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                microphone.connect(analyser);
+
+                // Hide permission message
+                document.getElementById('micPermission').style.display = 'none';
+
+                // Start visualization
+                visualizeAudio();
+
+                return true;
+            } catch (error) {
+                console.error('Microphone access error:', error);
+                document.getElementById('micPermission').style.display = 'block';
+                document.getElementById('micPermission').textContent =
+                    '❌ Microphone access denied. Please enable microphone permissions.';
+                return false;
+            }
+        }
+
+        // Audio visualization
+        function visualizeAudio() {
+            if (!analyser) return;
+
+            const visualizer = document.getElementById('visualizer');
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            // Create bars
+            visualizer.innerHTML = '';
+            const barCount = 32;
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'audio-bar';
+                bar.style.left = `${(i / barCount) * 100}%`;
+                visualizer.appendChild(bar);
+            }
+
+            function draw() {
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+
+                const bars = visualizer.querySelectorAll('.audio-bar');
+                const step = Math.floor(bufferLength / barCount);
+
+                bars.forEach((bar, i) => {
+                    const value = dataArray[i * step];
+                    const height = (value / 255) * 100;
+                    bar.style.height = `${height}%`;
+                });
+            }
+
+            draw();
+        }
+
+        // WebSocket connection
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8787/ws/meeting');
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                showError('Connection error. Please refresh the page.');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                if (isRecording) {
+                    stopMeeting();
+                }
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'transcription':
+                    addTranscriptEntry(data.speaker, data.text, data.time);
+                    break;
+
+                case 'speaker_identified':
+                    updateSpeakers(data.speaker);
+                    break;
+
+                case 'meeting_ended':
+                    handleMeetingEnd(data.results);
+                    break;
+
+                case 'error':
+                    showError(data.message);
+                    break;
+            }
+        }
+
+        // Start meeting
+        async function startMeeting() {
+            // Check microphone access
+            if (!audioContext) {
+                const hasAccess = await initAudio();
+                if (!hasAccess) return;
+            }
+
+            const title = document.getElementById('meetingTitle').value || 'Untitled Meeting';
+            const attendees = document.getElementById('attendees').value;
+            const autoVerify = document.getElementById('autoVerify').value === 'true';
+
+            // Send start command via HTTP (WebSocket for real-time updates)
+            try {
+                const response = await fetch('http://localhost:8787/meeting/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        attendees: attendees.split(',').map(a => a.trim()),
+                        auto_verify: autoVerify
+                    })
+                });
+
+                const result = await response.json();
+                meetingSlug = result.slug;
+                isRecording = true;
+                startTime = Date.now();
+
+                // Update UI
+                document.getElementById('startButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
+                document.querySelector('.status-indicator').className = 'status-indicator status-recording';
+                document.getElementById('startButton').innerHTML =
+                    '<span class="status-indicator status-recording"></span> Recording...';
+
+                // Clear transcript
+                document.getElementById('transcriptContainer').innerHTML = '';
+                document.getElementById('speakersList').innerHTML = '';
+
+                // Start timer
+                startTimer();
+
+                showSuccess('Meeting started successfully');
+
+            } catch (error) {
+                showError('Failed to start meeting: ' + error.message);
+            }
+        }
+
+        // Stop meeting
+        async function stopMeeting() {
+            if (!isRecording) return;
+
+            try {
+                const response = await fetch('http://localhost:8787/meeting/stop', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                handleMeetingEnd(result);
+
+            } catch (error) {
+                showError('Failed to stop meeting: ' + error.message);
+            }
+        }
+
+        // Handle meeting end
+        function handleMeetingEnd(results) {
+            isRecording = false;
+            clearInterval(timerInterval);
+
+            // Update UI
+            document.getElementById('startButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+            document.querySelector('.status-indicator').className = 'status-indicator status-idle';
+            document.getElementById('startButton').innerHTML =
+                '<span class="status-indicator status-idle"></span> Start Meeting';
+
+            // Show verification results
+            if (results.verification && results.verification.valid) {
+                const verifyDiv = document.getElementById('verificationResult');
+                verifyDiv.style.display = 'block';
+                verifyDiv.className = 'verification-result';
+
+                document.getElementById('docHash').textContent =
+                    results.verification.doc_hash.substring(0, 16) + '...';
+                document.getElementById('merkleRoot').textContent =
+                    results.verification.merkle_root.substring(0, 16) + '...';
+
+                // Setup download buttons
+                document.getElementById('downloadPDF').onclick = () => {
+                    window.open(`http://localhost:8787/download/${results.verification.slug}/pdf`);
+                };
+                document.getElementById('downloadPacket').onclick = () => {
+                    window.open(`http://localhost:8787/download/${results.verification.slug}/packet`);
+                };
+
+                showSuccess('Meeting verified and saved successfully!');
+            } else {
+                showError('Meeting ended but verification failed');
+            }
+        }
+
+        // Add transcript entry
+        function addTranscriptEntry(speaker, text, time) {
+            const container = document.getElementById('transcriptContainer');
+
+            const entry = document.createElement('div');
+            entry.className = 'transcript-entry';
+            entry.innerHTML = `
+                <div class="transcript-speaker">${speaker}</div>
+                <div class="transcript-text">${text}</div>
+                <div class="transcript-time">${formatTime(time)}</div>
+            `;
+
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Update speakers list
+        function updateSpeakers(speaker) {
+            const list = document.getElementById('speakersList');
+            const existingBadges = Array.from(list.querySelectorAll('.speaker-badge'));
+
+            const exists = existingBadges.some(badge => badge.textContent === speaker);
+            if (!exists) {
+                const badge = document.createElement('div');
+                badge.className = 'speaker-badge';
+                badge.textContent = speaker;
+                list.appendChild(badge);
+            }
+        }
+
+        // Timer functions
+        function startTimer() {
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            const elapsed = Date.now() - startTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            const display =
+                String(hours).padStart(2, '0') + ':' +
+                String(minutes % 60).padStart(2, '0') + ':' +
+                String(seconds % 60).padStart(2, '0');
+
+            document.getElementById('timer').textContent = display;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // UI helpers
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('startButton').addEventListener('click', startMeeting);
+        document.getElementById('stopButton').addEventListener('click', stopMeeting);
+
+        // Speaker enrollment
+        document.getElementById('enrollButton').addEventListener('click', async () => {
+            const name = document.getElementById('speakerName').value;
+            if (!name) {
+                showError('Please enter a speaker name');
+                return;
+            }
+
+            // TODO: Implement voice enrollment
+            showSuccess(`Speaker "${name}" enrollment started. Speak for 10 seconds...`);
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initAudio();
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>

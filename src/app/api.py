@@ -177,6 +177,107 @@ async def download_artifact(slug: str, artifact_type: str):
     )
 
 
+# Meeting monitoring endpoint
+from .meeting_monitor import MeetingMonitor
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
+
+# Global meeting monitor instance
+meeting_monitor: Optional[MeetingMonitor] = None
+
+
+@app.post("/meeting/start")
+async def start_meeting(
+    title: str = Form("Meeting"),
+    attendees: str = Form(""),
+    auto_verify: bool = Form(True)
+):
+    """Start a new meeting recording."""
+    global meeting_monitor
+
+    if meeting_monitor and meeting_monitor.is_monitoring:
+        raise HTTPException(status_code=400, detail="Meeting already in progress")
+
+    try:
+        # Parse attendees
+        attendees_list = [a.strip() for a in attendees.split(",") if a.strip()]
+
+        # Create meeting monitor
+        meeting_monitor = MeetingMonitor(
+            meeting_title=title,
+            attendees=attendees_list,
+            auto_verify=auto_verify,
+            model_size="tiny"  # Use tiny model for speed in demo
+        )
+
+        # Start meeting
+        slug = meeting_monitor.start_meeting()
+
+        return {
+            "slug": slug,
+            "status": "recording",
+            "message": "Meeting started successfully"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/meeting/stop")
+async def stop_meeting():
+    """Stop the current meeting recording."""
+    global meeting_monitor
+
+    if not meeting_monitor or not meeting_monitor.is_monitoring:
+        raise HTTPException(status_code=400, detail="No meeting in progress")
+
+    try:
+        # Stop meeting and get results
+        results = meeting_monitor.end_meeting()
+
+        # Clear monitor
+        meeting_monitor = None
+
+        return results
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/meeting/status")
+async def get_meeting_status():
+    """Get current meeting status."""
+    global meeting_monitor
+
+    if not meeting_monitor:
+        return {"status": "idle"}
+
+    return meeting_monitor.get_meeting_status()
+
+
+@app.websocket("/ws/meeting")
+async def websocket_meeting(websocket: WebSocket):
+    """WebSocket for real-time meeting updates."""
+    await websocket.accept()
+
+    try:
+        while True:
+            # Send updates if meeting is active
+            if meeting_monitor and meeting_monitor.is_monitoring:
+                status = meeting_monitor.get_meeting_status()
+                await websocket.send_json({
+                    "type": "status",
+                    "data": status
+                })
+
+            await asyncio.sleep(1)
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+
+
 # Mount static files for the web interface
 static_dir = Path(__file__).parent.parent.parent / "static"
 if static_dir.exists():
