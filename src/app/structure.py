@@ -208,12 +208,11 @@ class MinutesStructurer:
         )
 
     def _generate_notes(self, transcript: Transcript_v1) -> str:
-        """Generate summary notes from transcript."""
+        """Generate notes that preserve the original transcript exactly."""
 
-        total_items = len(transcript.items)
-        speakers = set(item.speaker for item in transcript.items if item.speaker != "Unknown")
+        # Simply concatenate all transcript items as they were in the original file
+        full_transcript = ""
+        for item in transcript.items:
+            full_transcript += item.text + "\n"
 
-        notes = f"Meeting transcript contained {total_items} speaking turns. "
-        notes += f"Participants: {', '.join(sorted(speakers))}."
-
-        return notes
+        return full_transcript.rstrip()  # Remove trailing newline

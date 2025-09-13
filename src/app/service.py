@@ -141,12 +141,32 @@ class VeriMinutesService:
                     receipt
                 )
 
+        # Load the full transcript to include in packet
+        transcript_data = self.storage.read_artifact(slug, "transcript.normalized.json")
+        transcript = Transcript_v1(**transcript_data)
+
+        # Create hash stamps for verification
+        from datetime import datetime, timezone
+        stamp_time = datetime.now(timezone.utc).isoformat()
+
+        hash_stamps = {
+            "transcript_sha256": transcript_cred["sha256"],
+            "transcript_blake3": transcript_cred["blake3"],
+            "minutes_sha256": minutes_cred["sha256"],
+            "minutes_blake3": minutes_cred["blake3"],
+            "merkle_root": minutes_proof["merkleRoot"],
+            "stamped_at": stamp_time
+        }
+
         packet = VerificationPacket(
             minutes=minutes,
             transcriptRef="transcript.normalized.json",
+            transcript=transcript,
             credential=minutes_cred,
             proof=minutes_proof,
-            anchorReceipt=anchor_receipt
+            anchorReceipt=anchor_receipt,
+            stampedAt=stamp_time,
+            hashStamp=hash_stamps
         )
         paths["packet"] = self.storage.store_artifact(
             slug,

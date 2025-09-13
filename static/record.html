@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackBox - Record Meeting</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #00ff88;
+            --accent-hover: #00cc6a;
+            --error: #ff4444;
+            --border: #333333;
+            --recording: #ff4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 2rem 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-box {
+            width: 40px;
+            height: 40px;
+            background: #000000;
+            border: 2px solid var(--accent);
+            display: inline-block;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+        }
+
+        .main {
+            flex: 1;
+            padding: 3rem 0;
+        }
+
+        .record-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent);
+        }
+
+        .record-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .button {
+            padding: 0.75rem 2rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .button:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-stop {
+            background: var(--recording);
+        }
+
+        .button-stop:hover:not(:disabled) {
+            background: #cc0000;
+        }
+
+        .button-secondary {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .button-secondary:hover:not(:disabled) {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .status-panel {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status-panel.active {
+            display: block;
+        }
+
+        .status-panel.recording {
+            border-color: var(--recording);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .recording-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--recording);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--recording);
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .timer {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            margin: 1rem 0;
+            font-feature-settings: "tnum";
+        }
+
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .status.error {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .results-section {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        nav a:hover {
+            color: var(--accent) !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div class="logo">
+                        <span class="logo-box"></span>
+                        <span>BlackBox</span>
+                    </div>
+                    <div class="tagline">Cryptographically Verified Meeting Minutes</div>
+                </div>
+                <nav style="display: flex; gap: 2rem;">
+                    <a href="/" style="color: var(--text-secondary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: color 0.3s;">Upload</a>
+                    <a href="/record.html" style="color: var(--accent); text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem;">Record</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="record-section">
+                <h2 class="section-title">Record Meeting</h2>
+
+                <form id="recordForm">
+                    <div class="form-group">
+                        <label for="title">Meeting Title</label>
+                        <input type="text" id="title" placeholder="Board Meeting" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="attendees">Attendees</label>
+                        <input type="text" id="attendees" placeholder="Alice, Bob, Carol">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recordMode">Recording Mode</label>
+                        <select id="recordMode">
+                            <option value="real">Real Audio (Microphone)</option>
+                            <option value="demo">Demo Mode (Simulated)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="autoVerify" checked>
+                            <label for="autoVerify" style="text-transform: none; margin-bottom: 0;">
+                                Auto-verify when recording stops
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="record-controls">
+                        <button type="button" class="button" id="startButton">
+                            Start Recording
+                        </button>
+                        <button type="button" class="button button-stop" id="stopButton" disabled>
+                            Stop Recording
+                        </button>
+                    </div>
+                </form>
+
+                <div id="statusPanel" class="status-panel">
+                    <div class="recording-indicator">
+                        <span class="recording-dot"></span>
+                        <span>RECORDING</span>
+                    </div>
+                    <div class="timer" id="timer">00:00</div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                        <span id="recordingMode"></span>
+                    </div>
+                </div>
+
+                <div id="status" class="status"></div>
+
+                <div id="results" class="results-section">
+                    <h3 style="margin-bottom: 1rem;">Recording Complete</h3>
+                    <p id="resultMessage" style="color: var(--text-secondary); margin-bottom: 1rem;"></p>
+                    <div class="result-links" id="resultLinks"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>BlackBox - Immutable Meeting Records</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:8787';
+
+        const recordForm = document.getElementById('recordForm');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusPanel = document.getElementById('statusPanel');
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const timerDiv = document.getElementById('timer');
+        const recordingModeSpan = document.getElementById('recordingMode');
+
+        let isRecording = false;
+        let startTime = null;
+        let timerInterval = null;
+
+        startButton.addEventListener('click', async () => {
+            const title = document.getElementById('title').value;
+            const attendees = document.getElementById('attendees').value;
+            const recordMode = document.getElementById('recordMode').value;
+            const autoVerify = document.getElementById('autoVerify').checked;
+
+            if (!title) {
+                showStatus('Please enter a meeting title', 'error');
+                return;
+            }
+
+            startButton.disabled = true;
+            stopButton.disabled = false;
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('attendees', attendees);
+            formData.append('auto_verify', autoVerify);
+            formData.append('use_real_audio', recordMode === 'real');
+
+            try {
+                const response = await fetch(`${API_URL}/meeting/start`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    isRecording = true;
+                    startTime = Date.now();
+                    startTimer();
+
+                    statusPanel.classList.add('active', 'recording');
+                    recordingModeSpan.textContent = recordMode === 'real'
+                        ? 'Recording from microphone...'
+                        : 'Demo recording in progress...';
+
+                    statusDiv.style.display = 'none';
+                    resultsDiv.classList.remove('active');
+
+                    // For demo mode, auto-stop after a moment
+                    if (recordMode === 'demo' && result.status === 'demo_complete') {
+                        setTimeout(() => {
+                            handleRecordingComplete(result);
+                        }, 1000);
+                    }
+                } else {
+                    showStatus(result.detail || 'Failed to start recording', 'error');
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                }
+            } catch (error) {
+                showStatus('Network error: ' + error.message, 'error');
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            }
+        });
+
+        stopButton.addEventListener('click', async () => {
+            stopButton.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/meeting/stop`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    handleRecordingComplete(result);
+                } else {
+                    showStatus(result.detail || 'Failed to stop recording', 'error');
+                }
+            } catch (error) {
+                showStatus('Network error: ' + error.message, 'error');
+            } finally {
+                startButton.disabled = false;
+                isRecording = false;
+                stopTimer();
+                statusPanel.classList.remove('active', 'recording');
+            }
+        });
+
+        function handleRecordingComplete(result) {
+            isRecording = false;
+            stopTimer();
+            statusPanel.classList.remove('active', 'recording');
+            startButton.disabled = false;
+            stopButton.disabled = true;
+
+            if (result.success) {
+                resultsDiv.classList.add('active');
+                document.getElementById('resultMessage').textContent =
+                    `Meeting recorded and verified. Hash: ${result.verification?.doc_hash?.substring(0, 16)}...`;
+
+                const links = document.getElementById('resultLinks');
+                links.innerHTML = `
+                    <a href="${API_URL}/download/${result.slug}/pdf" class="button button-secondary">
+                        Download PDF
+                    </a>
+                    <a href="${API_URL}/download/${result.slug}/packet" class="button button-secondary">
+                        Download Proof
+                    </a>
+                    <button class="button button-secondary" onclick="verifyRecording('${result.slug}')">
+                        Verify
+                    </button>
+                `;
+
+                showStatus('Recording completed and verified successfully', 'success');
+            } else {
+                showStatus(result.error || 'Recording failed', 'error');
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                timerDiv.textContent =
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timerDiv.textContent = '00:00';
+        }
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        async function verifyRecording(slug) {
+            try {
+                const response = await fetch(`${API_URL}/verify?slug=${slug}`);
+                const result = await response.json();
+
+                if (result.valid) {
+                    alert(`Verification successful!\n\nDocument Hash:\n${result.docHash}\n\nMerkle Root:\n${result.localRoot}`);
+                } else {
+                    alert('Verification failed');
+                }
+            } catch (error) {
+                alert('Verification error: ' + error.message);
+            }
+        }
+
+        // Check recording status on page load
+        async function checkRecordingStatus() {
+            try {
+                const response = await fetch(`${API_URL}/meeting/status`);
+                const data = await response.json();
+
+                if (data.is_recording) {
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    statusPanel.classList.add('active', 'recording');
+                    recordingModeSpan.textContent = 'Recording in progress...';
+                }
+            } catch (error) {
+                console.error('Failed to check recording status:', error);
+            }
+        }
+
+        checkRecordingStatus();
+    </script>
+</body>
+</html>

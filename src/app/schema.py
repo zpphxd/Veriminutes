@@ -103,9 +103,12 @@ class AnchorReceipt(BaseModel):
 class VerificationPacket(BaseModel):
     minutes: BoardMinutes_v1
     transcriptRef: str
+    transcript: Optional[Transcript_v1] = None  # Full transcript included
     credential: Credential
     proof: MerkleProof
     anchorReceipt: Optional[AnchorReceipt] = None
+    stampedAt: str  # ISO timestamp when packet was created
+    hashStamp: Dict[str, str] = {}  # Hash stamps for verification
 
 
 class VerificationResult(BaseModel):

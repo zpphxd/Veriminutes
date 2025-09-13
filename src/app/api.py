@@ -16,8 +16,8 @@ from .schema import (
 
 
 app = FastAPI(
-    title="VeriMinutes API",
-    description="Local-first verifiable minutes system",
+    title="BlackBox API",
+    description="Cryptographically verified meeting minutes",
     version="0.1.0"
 )
 
@@ -99,10 +99,50 @@ async def verify_artifacts(slug: str):
 
 @app.get("/sessions")
 async def list_sessions():
-    """List all available sessions."""
+    """List all available sessions with metadata."""
 
-    sessions = service.storage.list_sessions()
-    return {"sessions": sessions}
+    session_list = []
+    for slug in service.storage.list_sessions():
+        # Skip non-session directories
+        if slug in ['recordings', 'transcripts', 'undefined']:
+            continue
+
+        try:
+            manifest = service.storage.get_manifest(slug)
+
+            # Try to get date and title from minutes.json
+            date = ""
+            title = slug.replace("-", " ").title()
+
+            try:
+                minutes = service.storage.read_artifact(slug, "minutes.json")
+                date = minutes.get("date", "")
+                title = minutes.get("title", title)
+            except:
+                pass
+
+            session_list.append({
+                "slug": slug,
+                "date": date,
+                "title": title,
+                "createdAt": manifest.get("createdAt", "")
+            })
+        except:
+            # If no manifest, try to extract date from slug
+            parts = slug.split('-')
+            if len(parts) >= 3:
+                date = f"{parts[0]}-{parts[1]}-{parts[2]}"
+                session_list.append({
+                    "slug": slug,
+                    "date": date,
+                    "title": slug.replace("-", " ").title(),
+                    "createdAt": ""
+                })
+
+    # Sort by date descending (most recent first)
+    session_list.sort(key=lambda x: x.get("date", ""), reverse=True)
+
+    return {"sessions": session_list}
 
 
 @app.post("/upload")
@@ -145,6 +185,26 @@ async def upload_transcript(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/session/{slug}")
+async def delete_session(slug: str):
+    """Delete a session and all its artifacts."""
+
+    try:
+        session_dir = service.storage.get_session_dir(slug)
+
+        if not session_dir.exists():
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Delete the entire session directory
+        import shutil
+        shutil.rmtree(session_dir)
+
+        return {"success": True, "message": f"Session {slug} deleted successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/download/{slug}/{artifact_type}")
 async def download_artifact(slug: str, artifact_type: str):
     """Download a specific artifact."""
@@ -177,47 +237,40 @@ async def download_artifact(slug: str, artifact_type: str):
     )
 
 
-# Meeting monitoring endpoint
-from .meeting_monitor import MeetingMonitor
+# Meeting monitoring endpoint - using macOS recorder for real audio
+from .macos_recorder import macos_recorder
+from .simple_meeting import simple_recorder
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
-
-# Global meeting monitor instance
-meeting_monitor: Optional[MeetingMonitor] = None
 
 
 @app.post("/meeting/start")
 async def start_meeting(
     title: str = Form("Meeting"),
     attendees: str = Form(""),
-    auto_verify: bool = Form(True)
+    auto_verify: bool = Form(True),
+    use_real_audio: bool = Form(True)
 ):
     """Start a new meeting recording."""
-    global meeting_monitor
-
-    if meeting_monitor and meeting_monitor.is_monitoring:
-        raise HTTPException(status_code=400, detail="Meeting already in progress")
 
     try:
         # Parse attendees
         attendees_list = [a.strip() for a in attendees.split(",") if a.strip()]
 
-        # Create meeting monitor
-        meeting_monitor = MeetingMonitor(
-            meeting_title=title,
-            attendees=attendees_list,
-            auto_verify=auto_verify,
-            model_size="tiny"  # Use tiny model for speed in demo
-        )
+        # Use real audio recorder if requested
+        if use_real_audio:
+            result = macos_recorder.start_recording(
+                meeting_title=title,
+                attendees=attendees_list
+            )
+        else:
+            # Fallback to demo recorder
+            result = simple_recorder.start_recording(
+                meeting_title=title,
+                attendees=attendees_list
+            )
 
-        # Start meeting
-        slug = meeting_monitor.start_meeting()
-
-        return {
-            "slug": slug,
-            "status": "recording",
-            "message": "Meeting started successfully"
-        }
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -226,17 +279,13 @@ async def start_meeting(
 @app.post("/meeting/stop")
 async def stop_meeting():
     """Stop the current meeting recording."""
-    global meeting_monitor
-
-    if not meeting_monitor or not meeting_monitor.is_monitoring:
-        raise HTTPException(status_code=400, detail="No meeting in progress")
 
     try:
-        # Stop meeting and get results
-        results = meeting_monitor.end_meeting()
-
-        # Clear monitor
-        meeting_monitor = None
+        # Stop whichever recorder is active
+        if macos_recorder.is_recording:
+            results = macos_recorder.stop_recording()
+        else:
+            results = simple_recorder.stop_recording()
 
         return results
 
@@ -247,12 +296,12 @@ async def stop_meeting():
 @app.get("/meeting/status")
 async def get_meeting_status():
     """Get current meeting status."""
-    global meeting_monitor
-
-    if not meeting_monitor:
-        return {"status": "idle"}
-
-    return meeting_monitor.get_meeting_status()
+    is_recording = macos_recorder.is_recording or simple_recorder.is_recording
+    return {
+        "status": "recording" if is_recording else "idle",
+        "is_recording": is_recording,
+        "recorder": "macos" if macos_recorder.is_recording else ("simple" if simple_recorder.is_recording else "none")
+    }
 
 
 @app.websocket("/ws/meeting")

@@ -1,0 +1,42 @@
+Board Meeting - September 13, 2025
+===================================
+
+Present: Alice Johnson (Chair), Bob Smith, Carol Williams
+
+Alice Johnson: Good morning everyone. Let's call this meeting to order at 9:00 AM.
+
+Bob Smith: Good morning. I'd like to motion to approve the agenda as presented.
+
+Carol Williams: I second the motion.
+
+Alice Johnson: All in favor?
+All: Aye.
+Alice Johnson: Motion passes.
+
+Financial Report
+----------------
+Bob Smith: Our Q3 revenue was $2.5M, up 15% from Q2.
+Operating expenses: $1.8M
+Net profit: $700K
+
+Carol Williams: These are excellent results. What about our customer metrics?
+
+Bob Smith:
+- New customers: 45
+- Churn rate: 3.2%
+- NPS score: 72
+
+Action Items:
+1. Bob to prepare Q4 forecast by Sept 30
+2. Carol to review vendor contracts by Oct 15
+3. Alice to schedule next board meeting
+
+Alice Johnson: Any other business?
+
+Bob Smith: None from me.
+
+Carol Williams: Nothing here.
+
+Alice Johnson: Meeting adjourned at 9:47 AM.
+
+--- END OF TRANSCRIPT ---

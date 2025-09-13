@@ -34,20 +34,22 @@ class TxtParser:
         self.items = []
         idx = 0
 
+        # Preserve the original content exactly as-is
         for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+            # Keep the original line, just remove trailing newline
+            line = line.rstrip('\n')
 
-            speaker, text = self._extract_speaker(line)
+            # Still try to detect speaker for metadata, but preserve original text
+            speaker, _ = self._extract_speaker(line)
             if speaker:
                 self.current_speaker = speaker
 
-            if text:
+            # Add the complete original line as an item
+            if line or line == "":  # Include blank lines too
                 self.items.append(TranscriptItem(
                     idx=idx,
-                    speaker=self.current_speaker,
-                    text=text,
+                    speaker=self.current_speaker if speaker else "Text",
+                    text=line,  # Keep original line intact
                     ts=None
                 ))
                 idx += 1
