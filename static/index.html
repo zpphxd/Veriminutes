@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriMinutes - Verifiable Meeting Minutes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f5f5ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #e8e8ff;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .file-label:hover {
+            background: #5a67d8;
+        }
+
+        .form-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .process-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .process-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .process-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .status-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-item.complete {
+            background: #d4edda;
+        }
+
+        .status-item.error {
+            background: #f8d7da;
+        }
+
+        .status-item.processing {
+            background: #fff3cd;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .download-card {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .download-card:hover {
+            transform: translateY(-3px);
+            background: #e9ecef;
+        }
+
+        .download-card .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .download-card .title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .download-card .size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .reset-button:hover {
+            background: #5a6268;
+        }
+
+        .error-message {
+            color: #dc3545;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .verification-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 15px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .verification-badge.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .verification-badge .icon {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 VeriMinutes</h1>
+        <p class="subtitle">Transform your Otter transcripts into cryptographically verified board minutes</p>
+
+        <div id="uploadSection" class="upload-section">
+            <div class="upload-icon">📄</div>
+            <p style="margin-bottom: 15px; color: #666;">Drag & drop your Otter .txt transcript here</p>
+            <label for="fileInput" class="file-label">Choose File</label>
+            <input type="file" id="fileInput" accept=".txt">
+            <p style="margin-top: 15px; color: #999; font-size: 0.9em;">Supports .txt files exported from Otter.ai</p>
+        </div>
+
+        <div id="formSection" class="form-section">
+            <h3 style="margin-bottom: 20px;">Meeting Details</h3>
+
+            <div class="form-group">
+                <label for="meetingTitle">Meeting Title</label>
+                <input type="text" id="meetingTitle" placeholder="e.g., Q3 Board Meeting">
+            </div>
+
+            <div class="form-group">
+                <label for="meetingDate">Meeting Date</label>
+                <input type="date" id="meetingDate">
+            </div>
+
+            <div class="form-group">
+                <label for="attendees">Attendees (comma-separated)</label>
+                <input type="text" id="attendees" placeholder="e.g., Alice, Bob, Carol">
+            </div>
+
+            <button id="processButton" class="process-button">Process & Verify</button>
+        </div>
+
+        <div id="statusSection" class="status-section">
+            <h3 style="margin-bottom: 20px;">Processing Status</h3>
+            <div id="statusList"></div>
+        </div>
+
+        <div id="resultsSection" class="results-section">
+            <h3 style="margin-bottom: 10px;">✅ Processing Complete</h3>
+            <div id="verificationBadge" class="verification-badge">
+                <span class="icon">✓</span>
+                <span>Cryptographically Verified</span>
+            </div>
+
+            <div class="download-grid" id="downloadGrid">
+                <!-- Download cards will be inserted here -->
+            </div>
+
+            <button id="resetButton" class="reset-button">Process Another File</button>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8787';
+        let currentSlug = null;
+        let uploadedFile = null;
+
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const formSection = document.getElementById('formSection');
+        const statusSection = document.getElementById('statusSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].name.endsWith('.txt')) {
+                handleFileSelect(files[0]);
+            } else {
+                showError('Please upload a .txt file');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            uploadedFile = file;
+            uploadSection.style.display = 'none';
+            formSection.style.display = 'block';
+
+            // Pre-fill form with defaults
+            document.getElementById('meetingDate').value = new Date().toISOString().split('T')[0];
+
+            // Try to extract title from filename
+            const fileName = file.name.replace('.txt', '');
+            document.getElementById('meetingTitle').value = fileName;
+        }
+
+        // Process button
+        document.getElementById('processButton').addEventListener('click', async () => {
+            if (!uploadedFile) {
+                showError('Please select a file');
+                return;
+            }
+
+            const title = document.getElementById('meetingTitle').value;
+            const date = document.getElementById('meetingDate').value;
+            const attendees = document.getElementById('attendees').value;
+
+            if (!title || !date) {
+                showError('Please fill in all required fields');
+                return;
+            }
+
+            await processTranscript(uploadedFile, title, date, attendees);
+        });
+
+        async function processTranscript(file, title, date, attendees) {
+            formSection.style.display = 'none';
+            statusSection.style.display = 'block';
+
+            const statusList = document.getElementById('statusList');
+            statusList.innerHTML = '';
+
+            try {
+                // Step 1: Upload and ingest
+                updateStatus('upload', 'Uploading transcript...', 'processing');
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('title', title);
+                formData.append('date', date);
+                formData.append('attendees', attendees);
+
+                const uploadResponse = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                const uploadResult = await uploadResponse.json();
+                currentSlug = uploadResult.slug;
+
+                updateStatus('upload', 'Transcript uploaded', 'complete');
+
+                // Step 2: Build artifacts
+                updateStatus('build', 'Building credentials and proofs...', 'processing');
+
+                const buildResponse = await fetch(`${API_URL}/build`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slug: currentSlug })
+                });
+
+                if (!buildResponse.ok) {
+                    throw new Error('Build failed');
+                }
+
+                updateStatus('build', 'Artifacts generated', 'complete');
+
+                // Step 3: Verify
+                updateStatus('verify', 'Verifying integrity...', 'processing');
+
+                const verifyResponse = await fetch(`${API_URL}/verify?slug=${currentSlug}`);
+                const verifyResult = await verifyResponse.json();
+
+                if (verifyResult.valid) {
+                    updateStatus('verify', 'Verification successful', 'complete');
+                } else {
+                    updateStatus('verify', 'Verification failed', 'error');
+                }
+
+                // Show results
+                showResults(verifyResult.valid);
+
+            } catch (error) {
+                console.error('Processing error:', error);
+                showError(`Processing failed: ${error.message}`);
+                updateStatus('error', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function updateStatus(id, text, status) {
+            let statusItem = document.getElementById(`status-${id}`);
+            if (!statusItem) {
+                statusItem = document.createElement('div');
+                statusItem.id = `status-${id}`;
+                statusItem.className = 'status-item';
+                document.getElementById('statusList').appendChild(statusItem);
+            }
+
+            statusItem.className = `status-item ${status}`;
+
+            let icon = '⏳';
+            if (status === 'complete') icon = '✅';
+            if (status === 'error') icon = '❌';
+            if (status === 'processing') icon = '<span class="spinner"></span>';
+
+            statusItem.innerHTML = `
+                <span>${text}</span>
+                <span>${icon}</span>
+            `;
+        }
+
+        function showResults(isValid) {
+            statusSection.style.display = 'none';
+            resultsSection.style.display = 'block';
+
+            const verificationBadge = document.getElementById('verificationBadge');
+            if (!isValid) {
+                verificationBadge.classList.add('invalid');
+                verificationBadge.innerHTML = '<span class="icon">✗</span><span>Verification Failed</span>';
+            }
+
+            // Add download cards
+            const downloadGrid = document.getElementById('downloadGrid');
+            downloadGrid.innerHTML = '';
+
+            const artifacts = [
+                { id: 'pdf', title: 'Meeting Minutes', icon: '📋', type: 'PDF' },
+                { id: 'packet', title: 'Verification Packet', icon: '📦', type: 'JSON' },
+                { id: 'proof', title: 'Merkle Proof', icon: '🔐', type: 'JSON' },
+                { id: 'transcript', title: 'Normalized Transcript', icon: '📝', type: 'JSON' }
+            ];
+
+            artifacts.forEach(artifact => {
+                const card = document.createElement('div');
+                card.className = 'download-card';
+                card.innerHTML = `
+                    <div class="icon">${artifact.icon}</div>
+                    <div class="title">${artifact.title}</div>
+                    <div class="size">${artifact.type} Document</div>
+                `;
+                card.addEventListener('click', () => downloadArtifact(artifact.id));
+                downloadGrid.appendChild(card);
+            });
+        }
+
+        async function downloadArtifact(type) {
+            if (!currentSlug) return;
+
+            const url = `${API_URL}/download/${currentSlug}/${type}`;
+            window.open(url, '_blank');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Reset button
+        document.getElementById('resetButton').addEventListener('click', () => {
+            currentSlug = null;
+            uploadedFile = null;
+            uploadSection.style.display = 'block';
+            formSection.style.display = 'none';
+            statusSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            fileInput.value = '';
+            document.getElementById('meetingTitle').value = '';
+            document.getElementById('meetingDate').value = '';
+            document.getElementById('attendees').value = '';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veriminutes"
+version = "0.1.0"
+description = "Local-first verifiable minutes system"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.0.0",
+    "blake3>=0.4.0",
+    "PyNaCl>=1.5.0",
+    "reportlab>=4.0.0",
+    "python-multipart>=0.0.6",
+    "click>=8.1.0",
+    "toml>=0.10.2",
+    "web3>=6.0.0",
+    "pytest>=7.4.0",
+    "httpx>=0.25.0",
+]
+
+[project.scripts]
+veriminutes = "src.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

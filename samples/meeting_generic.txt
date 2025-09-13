@@ -1,0 +1,89 @@
+Alice: Good morning everyone, welcome to our Q3 Board Meeting. Let's begin with a roll call to confirm attendance.
+
+Bob: Bob here, present and ready.
+
+Carol: Carol present, joining from the New York office.
+
+Alice: Thank you. We have a quorum. Let's review today's agenda. First, we'll approve the minutes from our last meeting. Second, we'll review Q2 financial performance. Third, we'll discuss the product roadmap for Q4. And finally, we'll address new business items.
+
+Bob: The agenda looks comprehensive. I'd like to add a brief discussion about our hiring plans for engineering under new business.
+
+Alice: Noted, Bob. We'll add that to new business. Let's start with the first item. I motion to approve the minutes from our June 15th board meeting as distributed.
+
+Carol: I second the motion to approve the June 15th minutes.
+
+Alice: All in favor of approving the minutes?
+
+Bob: Aye.
+
+Carol: Aye.
+
+Alice: Motion passed unanimously. The June 15th minutes are approved. Moving on to our Q2 financial review. Bob, would you present the highlights?
+
+Bob: Certainly. Q2 revenue came in at $4.2 million, which is 15% above our projections. Our gross margin improved to 72%, up from 68% in Q1. Operating expenses were controlled at $2.8 million. We ended the quarter with $12 million in cash reserves.
+
+Carol: Those are strong numbers. What drove the revenue beat?
+
+Bob: Primarily new enterprise customer acquisitions. We closed 8 enterprise deals versus our target of 5. The sales team really executed well this quarter.
+
+Alice: Excellent work. Any concerns we should be aware of?
+
+Bob: Our customer acquisition cost is trending higher. We're at $15,000 per enterprise customer, up from $12,000. We need to monitor this closely.
+
+Alice: Agreed. Let's make that an action item. Bob, can you prepare a CAC reduction plan for our next meeting?
+
+Bob: I'll have that ready by October 1st.
+
+Alice: Perfect. Moving to the product roadmap discussion. Carol, please share the Q4 priorities.
+
+Carol: For Q4, we have three major initiatives. First, launching our mobile application by November 1st. Second, implementing enterprise SSO by November 15th. Third, adding real-time collaboration features by December 1st.
+
+Alice: These are ambitious targets. Do we have the engineering resources to deliver all three?
+
+Carol: That's actually a concern. We're currently at 80% capacity. To deliver all three initiatives confidently, we'd need to add 2-3 senior engineers.
+
+Bob: This ties into my new business item about hiring. I propose we approve hiring 3 senior engineers immediately.
+
+Alice: Let's formally address that. I'd like to make a motion to authorize the hiring of 3 senior software engineers with a budget not to exceed $450,000 in annual salaries.
+
+Carol: I second the motion for hiring authorization.
+
+Alice: Discussion on the motion?
+
+Bob: I think this is critical for our Q4 execution. The investment will pay off quickly.
+
+Carol: Agreed. We can't afford to miss these product milestones.
+
+Alice: Let's vote. All in favor?
+
+Bob: Aye.
+
+Carol: Aye.
+
+Alice: Aye. Motion passed unanimously. We're approved to hire 3 senior engineers.
+
+Alice: Carol, as an action item, please work with HR to begin the recruiting process immediately.
+
+Carol: I'll initiate the search this week and have job postings live by Thursday.
+
+Alice: Excellent. Any other new business to discuss?
+
+Bob: I'd like to note that we should schedule our annual strategic planning session. I propose the week of October 15th.
+
+Alice: Good point. Let me take an action to send out a calendar poll for the strategic planning session and book a venue.
+
+Carol: One more item - we need to decide on our board observer policy. We've had requests from two of our investors.
+
+Alice: Let's table that for executive session. I'll add it to our executive session agenda.
+
+Bob: Sounds appropriate.
+
+Alice: If there's no other business, I move to adjourn the public portion of our Q3 board meeting.
+
+Carol: Second.
+
+Alice: Meeting adjourned at 10:47 AM. Board members, please stay on for a brief executive session.
+
+Bob: Thank you, everyone.
+
+Carol: Great meeting. See you all next quarter.

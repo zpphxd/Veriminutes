@@ -1,0 +1,34 @@
+[general]
+app_name = "VeriMinutes"
+version = "0.1.0"
+output_dir = "./output"
+
+[storage]
+cas_enabled = true
+cas_path = "./output/cas"
+keys_path = "~/.veriminutes/keys"
+
+[hashing]
+chunk_size = 65536  # 64KB
+default_algo = "sha256"
+secondary_algo = "blake3"
+
+[anchoring]
+enabled = false  # Disabled by default
+rpc_url = "http://localhost:8545"
+chain_id = 31337
+contract_address = ""  # Will be populated after deployment
+gas_limit = 500000
+
+[pdf]
+font_size = 12
+font_family = "Helvetica"
+margin_top = 72
+margin_bottom = 72
+margin_left = 72
+margin_right = 72
+
+[api]
+host = "localhost"
+port = 8787
+reload = true
